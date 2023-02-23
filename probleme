@@ -1,0 +1,4 @@
+let justList = \list -> map (\x -> fromMaybe 0  x) (filter isJust list) in justList [Just 4, Nothing, Just 5, Nothing, Just 7] 
+let range = \x -> reverse (letrec revRange = \x -> if (isZero x) [] (++ [- x 1] (revRange (- x 1))) in recvRange x) in range 4 
+letrec revRange = \x -> if (isZero x) [] (++ [- x 1] (revRange (- x 1))) in revRange 4 
+ 
