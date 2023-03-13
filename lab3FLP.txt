@@ -1,0 +1,95 @@
+Recapitulare: un tip de date in haskell pentru a putea impl parsere pt ob a
+newtype Parser a = Parser {apply :: String -> [(a, String)]}
+
+> :t apply
+apply :: Parser a -> String -> [(a, String)]
+
+satisfy :: (Char -> Bool) -> Parser Char
+
+--acel parser construit pentru a accepta drept token valid orice caracter
+anychar :: Parser Char
+anychar = satisfy (\_ ->True)
+
+digit :: Parser Char
+digit = satisfy isDigit
+
+> apply digit "123"
+[("1","23")]
+
+> apply digit "23"
+[("2","3")]
+
+> apply digit "3"
+[("3","")]
+
+> apply digit ""
+[]
+
+"123" -> [("1","23")] -> [("2","3")] -> [("3","")] -> []
+
+> apply digit "1ab"
+[("1","ab")]
+
+> apply digit "ab"
+[]
+
+Ce face parserul
+- consuma sirul de intrare - determinist
+  - il parcurge recursiv pana la elem de baza -""
+    in cazul in care toate caract pot fi parsate
+  - ori il parcurge rec pana la c de baza, ori pana la primul caracter care nu poate fi parsat
+- caracterul pur functional al parserului consta in procesarea sirului de intrare
+
+"123" -> "23" -> "3" -> "" -> stop
+"1ab" -> "ab" -> stop
+- se produce un efect lateral si anume identif tokenului valid
+
+Comportamentul Monadic imi permite sa procesez determinist inputul, dar sa propag si efecte laterale - tokenii obtinuti in urma evaluarii
+
+Pentru a construi o Monada avem nevoie de Functor si Applicative 
+
+Functor: f -> [c] v -> [c] f v
+Applicative: [c] f  -> [c] v -> [c] f v
+
+-- imi permite secventierea actiunilor pentru care alegerea unei actiuni viitoare depinde de rezultatul unei actiuni curente
+instance Monad Parser where
+ pa >>= k = Parser (\input -> [(b,restb )| 
+     (a, resta) <- apply pa input,
+     (b, restb) <- apply (k a) resta ])
+
+Monadele permit scrierea in do-notation
+Daca vrem sa definim un parser care sa identifice cifrele scrise intre paranteze
+"(5)" -> 5
+
+char :: Char -> Parser Char
+char c = satisfy (\x -> x == c)
+
+digit :: Parser Char
+digit = satisfy isDigit
+
+cifParanteze :: Parser Int
+cifParanteze = do
+char '('
+d <- digit
+char ')'
+return (digitToInt d)
+
+-- Ex 2
+Impl ac functie, dar folosind doar Applicative - doar pure si <*>, fara monade
+cifSemn1 :: Parser Int
+cifSemn1 = 
+  pure convert <*> satisfy (\x -> elem x "+-") <*> (digitToInt <$> digit)
+where
+  convert '+' d = d
+  convert '-' d = -d
+
+:t convert :: Char -> Int -> Int
+
+-- Ex 3
+Sa se scrie un parser pt string 
+string :: String -> Parser String
+
+care sa parseze in functie de un keyword specificat
+
+> apply (string "Hi") Hike
+[("Hi","ke")]
